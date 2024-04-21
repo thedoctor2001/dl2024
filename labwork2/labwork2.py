@@ -32,14 +32,12 @@ def gradient_descent(x, y, w1, w0, learning_rate, iterations, tolerance=1e-6):
         w1 -= (learning_rate / m) * sum_errors_w1
         w0 -= (learning_rate / m) * sum_errors_w0
 
-        if i % 10 == 9 or i == iterations - 1:
-            current_cost = compute_cost(x, y, w1, w0)
-            print(f"Iteration {i}: w1 = {w1}, w0 = {w0}, cost = {current_cost}")
+        current_cost = compute_cost(x, y, w1, w0)
+        print(f"Iteration {i}: w1 = {w1}, w0 = {w0}, cost = {current_cost}")
 
-            if abs(current_cost - previous_cost) < tolerance:
-                print("Convergence reached.")
-                break
-            previous_cost = current_cost
+        if abs(current_cost - previous_cost) < tolerance:
+            break
+        previous_cost = current_cost
 
     return w1, w0
 
