@@ -2,7 +2,7 @@ import random
 import math
 
 class Layer:
-    def __init__(self, size, next_layer_size=None, activation='tanh'):
+    def __init__(self, size, next_layer_size=None, activation='sigmoid'):
         self.size = size
         self.activation = activation
         self.weights = []
@@ -25,8 +25,13 @@ class Layer:
     def activate(self, x):
         if self.activation == 'tanh':
             return math.tanh(x)
+        elif self.activation == "sigmoid":
+            return self.sigmoid(x)
 
         return x
+
+    def sigmoid(self, x):
+        return 1 / (1 + math.exp(-x))
 
     def feedforward(self, inputs):
         outputs = []
