@@ -1,73 +1,76 @@
-import random
 import math
+import random
 
-class Layer:
-    def __init__(self, size, next_layer_size=None, activation='sigmoid'):
-        self.size = size
-        self.activation = activation
-        self.weights = []
-        self.biases = []
+class Neuron:
+    def __init__(self, bias=0.0):
+        self.value = 0.0
+        self.bias = bias
+        self.incoming_links = []
 
-        if next_layer_size:
-            self.weights = [[0.0 for _ in range(size)] for _ in range(next_layer_size)]
-            self.biases = [0.0 for _ in range(next_layer_size)]
+    def calculate_output(self):
+        total_input = sum(link.weight * link.start_neuron.value for link in self.incoming_links)
+        self.value = Neuron.sigmoid(total_input + self.bias)
 
-    def initialize_random(self):
-        for i in range(len(self.weights)):
-            for j in range(len(self.weights[i])):
-                self.weights[i][j] = random.uniform(0, 1)
-            self.biases[i] = random.uniform(0, 1)
-
-    def initialize_from_file(self, weights, biases):
-        self.weights = weights
-        self.biases = biases
-
-    def activate(self, x):
-        if self.activation == 'tanh':
-            return math.tanh(x)
-        elif self.activation == "sigmoid":
-            return self.sigmoid(x)
-
-        return x
-
-    def sigmoid(self, x):
+    @staticmethod
+    def sigmoid(x):
         return 1 / (1 + math.exp(-x))
 
-    def feedforward(self, inputs):
-        outputs = []
-        for i in range(len(self.weights)):
-            activation_sum = sum(w * inp for w, inp in zip(self.weights[i], inputs)) + self.biases[i]
-            outputs.append(self.activate(activation_sum))
-        return outputs
+
+class Link:
+    def __init__(self, start_neuron, end_neuron, weight=0.0):
+        self.start_neuron = start_neuron
+        self.end_neuron = end_neuron
+        self.weight = weight
+
+
+class Layer:
+    def __init__(self, num_neurons):
+        self.neurons = [Neuron() for _ in range(num_neurons)]
+
+    def connect_to(self, next_layer):
+        for neuron in self.neurons:
+            for next_neuron in next_layer.neurons:
+                weight = random.uniform(0, 1)
+                link = Link(neuron, next_neuron, weight)
+                next_neuron.incoming_links.append(link)
+
 
 class NeuralNetwork:
-    def __init__(self, structure):
-        self.layers = []
-        for i in range(len(structure)-1):
-            self.layers.append(Layer(structure[i], structure[i+1]))
+    def __init__(self, layer_sizes, initialize_random=True, weights_biases_file=None):
+        self.layers = [Layer(size) for size in layer_sizes]
 
-    def initialize_weights(self, method='random', filename=None):
-        if method == 'from_file':
-            with open(filename, 'r') as f:
-                for layer in self.layers:
-                    weights = []
-                    for _ in range(len(layer.weights)):
-                        weights.append(list(map(float, f.readline().strip().split())))
-                    biases = list(map(float, f.readline().strip().split()))
-                    layer.initialize_from_file(weights, biases)
-        elif method == 'random':
-            for layer in self.layers:
-                layer.initialize_random()
+        for i in range(len(self.layers) - 1):
+            self.layers[i].connect_to(self.layers[i + 1])
 
-    def feedforward(self, inputs):
-        activations = inputs
-        for layer in self.layers:
-            activations = layer.feedforward(activations)
-        return activations
+        if not initialize_random and weights_biases_file:
+            self.load_weights_biases(weights_biases_file)
 
-structure = [3, 5, 2]
-nn = NeuralNetwork(structure)
-nn.initialize_weights('random')
-inputs = [0.5, -0.3, 0.1]
-output = nn.feedforward(inputs)
-print(output)
+    def load_weights_biases(self, filename):
+        with open(filename, 'r') as f:
+            for layer in self.layers[1:]:
+                for neuron in layer.neurons:
+                    neuron.bias = float(f.readline().strip())
+                    for link in neuron.incoming_links:
+                        link.weight = float(f.readline().strip())
+
+    def feedforward(self, input_values):
+        for i, value in enumerate(input_values):
+            self.layers[0].neurons[i].value = value
+
+        for layer in self.layers[1:]:
+            for neuron in layer.neurons:
+                neuron.calculate_output()
+
+        return [neuron.value for neuron in self.layers[-1].neurons]
+
+    def print_network(self):
+        for i, layer in enumerate(self.layers):
+            print(f"Layer {i}:")
+            for j, neuron in enumerate(layer.neurons):
+                incoming = [(link.start_neuron.value, link.weight) for link in neuron.incoming_links]
+                print(f"  Neuron {j}: value={neuron.value}, bias={neuron.bias}, incoming={incoming}")
+
+network = NeuralNetwork([2, 3, 1])
+output = network.feedforward([0.5, 0.1])
+print("Output:", output)
+network.print_network()
